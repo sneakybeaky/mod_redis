@@ -1,0 +1,11 @@
+In order of priority :
+
+
+- Code review on master branch -> Jon
+
+- Support for Apache 2.4
+- Port existing tests to tcl
+- Add tcl tests for JSON responses
+- Add as_is functionality
+- Add support for query parameters
+- Allow parameter boundries to be set for REDIS commands returning data ranges, i.e. ZREVRANGE
