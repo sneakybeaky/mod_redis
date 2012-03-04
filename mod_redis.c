@@ -915,7 +915,7 @@ static void redis_child_init(apr_pool_t *p, server_rec *s)
 static int redis_post_config(apr_pool_t *p,apr_pool_t *plog,apr_pool_t *ptemp,server_rec *s)
 {
 	if(s && sconf)
-#ifdef AP_SERVER_MINORREVISION == "2.4"
+#if AP_SERVER_MINORVERSION_NUMBER == 4
 		sconf->loglevel = s->log.level;
 #else
 		sconf->loglevel = s->loglevel;

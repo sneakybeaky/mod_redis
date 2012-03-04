@@ -42,7 +42,11 @@ use the directory created when unzipping the file
 
 HIREDIS_HOME=`pwd`/antirez-hiredis-XXXXXXX
 
-4. Compile the module
+Compile the hiredis library
+
+pushd ; cd $HIREDIS_HOME ; make ; popd
+
+4. Compile mod_redis
 
 apxs -c -I $HIREDIS_HOME $HIREDIS_HOME/libhiredis.a mod_redis.c
 
