@@ -44,7 +44,7 @@ HIREDIS_HOME=`pwd`/antirez-hiredis-XXXXXXX
 
 Compile the hiredis library
 
-pushd ; cd $HIREDIS_HOME ; make ; popd
+pushd $HIREDIS_HOME ; make ; popd
 
 4. Compile mod_redis
 
