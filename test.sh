@@ -155,11 +155,11 @@ fi
 echo "Configuring httpd and restarting on port 8081..."
 aliases=( '^ping$ PING'
      	  '^poster$ "SET ${FORM:key} ${FORM:value}" POST'
-     	  '^([^/]+)/([^/]+)$ "ZADD $1 ${DATA} $2" PUT'
+     	  '^([^/]+)/([^/]+)$ "ZADD $1 %{DATA} $2" PUT'
      	  '^([^/]+)/([^/]+)$ "ZREM $1 $2" DELETE'
      	  '^([^/]+)/count$ "ZCARD $1"'
      	  '^([^/]+)$ "GET $1"'
-     	  '^([^/]+)$ "SET $1 ${DATA}" PUT'
+     	  '^([^/]+)$ "SET $1 %{DATA}" PUT'
      	  '^([^/]+)$ "DEL $1" DELETE'
      	  '^([^/]+)/range/([^/]+)/([^/]+)$ "ZRANGE $1 $2 $3 WITHSCORES"'
      	  '^([^/]+)/revrange$ "ZREVRANGE $1 ${FORM:from} ${FORM:to} WITHSCORES" POST'
