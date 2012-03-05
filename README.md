@@ -79,8 +79,8 @@ grouped parts (in parentheses) of the TestString.
 
 * Request variables: These are variables from the current request being processed
 
-    {DATA}         The body content of a PUT or POST request  
-    {FORM:field}   The value of a form field taken from PUT or POST request. The request must have
+    %{DATA}         The body content of a PUT or POST request  
+    ${FORM:field}   The value of a form field taken from PUT or POST request. The request must have
                include the Content-Type header as application/x-www-form-urlencoded  
 
 * Method: The HTTP method of the given request, GET, PUT, POST or DELETE. When a method is not
@@ -93,7 +93,7 @@ To define aliases which will map a single URL path element to the REDIS commands
 manipulation (specifically GET, SET and DELete) you would add the following directives:
 
     RedisAlias ^([^/]+)$ "GET $1"
-    RedisAlias ^([^/]+)$ "SET $1 ${DATA}" PUT
+    RedisAlias ^([^/]+)$ "SET $1 %{DATA}" PUT
     RedisAlias ^([^/]+)$ "DEL $1" DELETE
 
 To define an alias to create a new member to a sorted set from a POSTed form you could add the 

@@ -794,7 +794,7 @@ static const char * set_alias(cmd_parms *parms, void *in_struct_ptr,const char *
 			} else if((*cmdlen<sizeof(field)) && (sscanf(*cmds, "${FORM:%[^}]}", field) == 1)) {
 				alias->tokenargs[tokens] = ARG_FORM_FIELD;
 				alias->tokenfields[tokens] = apr_pstrdup(parms->pool,field);
-			} else if((*cmdlen == 7) && !memcmp(*cmds,"${DATA}",7)) {
+			} else if((*cmdlen == 7) && !memcmp(*cmds,"%{DATA}",7)) {
 				alias->tokenargs[tokens] = ARG_REQUEST_BODY;
 			}
 
