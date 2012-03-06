@@ -140,7 +140,7 @@ fi
 
 #ensure REDIS is running locally
 echo "Testing connection to REDIS on $redisipaddress:$redisportnumber..."
-redis_ping=`(sleep 1; echo "PING") | telnet $redisipaddress $redisportnumber | grep '+PONG'`
+redis_ping=`(sleep 2; echo "PING") | telnet $redisipaddress $redisportnumber | grep '+PONG'`
 if [ -z $redis_ping ]; then 
 	echo '**FAIL**'
 	echo "******** Unable to determine if REDIS is running"
@@ -163,6 +163,7 @@ aliases=( '^ping$ PING'
      	  '^([^/]+)$ "DEL $1" DELETE'
      	  '^([^/]+)/range/([^/]+)/([^/]+)$ "ZRANGE $1 $2 $3 WITHSCORES"'
      	  '^([^/]+)/revrange$ "ZREVRANGE $1 ${FORM:from} ${FORM:to} WITHSCORES" POST'
+     	  '^([^/]+)/rank$ "ZRANK $1 ${QSA:key}"'
      	  )
 setRedisAlias aliases[@]
 apachectl -f `pwd`"/$configfile" -k start	
@@ -215,6 +216,9 @@ testPostXML "$testset/revrange" "from=1&to=2" '4' 'count\(/response/array/string
 testPostXML "poster" "key=$testkey&value=hello%20world" 'OK' '/response/status/text\(\)'
 testGetXML "$testkey" "hello world" '/response/string/text\(\)'
 
+#testing query string arguments
+testGetXML "$testset/rank?key=user2" "1" '/response/integer/text\(\)'
+testGet "$testset/rank.jsonp?callback=foo\&key=user2" 'foo({ "integer" : "1" });'
 
 #Clean up and stop our temporary apache instance 
 echo "Cleaning up and stopping test httpd instance (8081)..."

@@ -6,5 +6,4 @@ In order of priority :
 - Port existing tests to tcl
 - Add tcl tests for JSON responses
 - Add as_is functionality
-- Add support for query parameters
 - Allow parameter boundries to be set for REDIS commands returning data ranges, i.e. ZREVRANGE

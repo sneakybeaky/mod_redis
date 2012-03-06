@@ -109,6 +109,7 @@ grouped parts (in parentheses) of the TestString.
     %{DATA}         The body content of a PUT or POST request  
     ${FORM:field}   The value of a form field taken from PUT or POST request. The request must have
                include the Content-Type header as application/x-www-form-urlencoded  
+    ${QSA:field}   The value of a query string argument taken from the request URL
 
 **Method**  
 
@@ -140,6 +141,11 @@ To define an alias to create a new member to a sorted set from a POSTed form you
 following directive:
 
     RedisAlias ^zadd$ "ZADD ${FORM:key} ${FORM:score} ${FORM:member}" POST
+    
+To define an alias to determine the rank of a key in a sorted set based on a query parameter, you
+could add the following directive:
+
+    RedisAlias ^([^/]+)/rank$ "ZRANK $1 ${QSA:key}"
 
 
 RedisIPAddress Directive

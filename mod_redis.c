@@ -52,6 +52,7 @@
  */
 #define ARG_REQUEST_BODY	-1
 #define ARG_FORM_FIELD		-2
+#define ARG_QUERY_PARAM		-3
 
 /*
  * macros
@@ -381,37 +382,36 @@ static redisReply * execRedisCommandsArgv(request_rec *r, int args, const char *
 }
 
 apr_table_t * parseFormData(request_rec *r,const char *data) {
-	const char * content_type = apr_table_get(r->headers_in,"Content-Type");
 	const char * sof;
 	const char * sov;
 	const char * eof;
 	const char * eov;
+	char * key;
 	char * value;
 
 	apr_table_t * form;
 
-	RDEBUG(r,"Parsing form data: %s",data);
-
-	if(!content_type || strcasecmp(content_type,"application/x-www-form-urlencoded")) {
-		RDEBUG(r,"Unexpected content type: %s",content_type);
-		return 0;
-	}
-
 	if((form = apr_table_make(r->pool,1)) == 0) {
-		RDEBUG(r,"Failed to allocate from pool");
+		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "Failed to allocate new table from pool");
 		return 0;
 	}
 
 	while(*data) {
 		sof = eof = data;
-		while(*eof && (*eof != '=') && (*eof != '\r')) {
+		while(*eof && (*eof != '=')) {
 			eof++;
 			data++;
 		}
-		RDEBUG(r," - field '%*.*s'",(int)(eof-sof),(int)(eof-sof),sof);
 
 		if(*data++ != '=') {
-			RDEBUG(r,"Unexpected character encountered %*.*s when expecting '='",1,1,data - 1);
+			ap_log_rerror(	APLOG_MARK,
+							APLOG_ERR,
+							0,
+							r,
+							"Invalid data format, missing '=' delimiter between key and value for key '%*.*s'",
+							(int)(eof-sof),
+							(int)(eof-sof),
+							sof);
 			return 0;
 		}
 		sov = eov = data;
@@ -423,8 +423,8 @@ apr_table_t * parseFormData(request_rec *r,const char *data) {
 		value = apr_pstrmemdup(r->pool,sov,(int)(eov-sov));
 		ap_unescape_url(value);
 
-		RDEBUG(r," - value %s",value);
-		apr_table_set(form,apr_pstrmemdup(r->pool,sof,(int)(eof-sof)),value);
+		key = apr_pstrmemdup(r->pool,sof,(int)(eof-sof));
+		apr_table_set(form,key,value);
 
 		if(*data == '&') {
 			data++;
@@ -443,10 +443,8 @@ static int redis_handler(request_rec *r) {
 	redisReply * reply = 0;
 	char * data = 0;
 	apr_size_t datalen = 0;
-	const char ** queryargsv = 0;
-	size_t * queryargsc = 0;
-	int queryargs = 0;
-	char querycallback[128] = "";
+	apr_table_t * queryparams = 0;
+	const char * callback = 0;
 
 	if(strcmp(r->handler, "redis")) {
 		return DECLINED;
@@ -521,16 +519,12 @@ static int redis_handler(request_rec *r) {
 	 * Parse the query parameters
 	 */
 	if(r->parsed_uri.query) {
-		queryargsv = parseCommandIntoArgArray(r->parsed_uri.query,strlen(r->parsed_uri.query),'&',&queryargsc,&queryargs);
-		RDEBUG(r,"Parsed %d query parameters",queryargs);
-		int index=0;
-		for(index=0;index<queryargs;index++) {
-			RDEBUG(r," - Query parameter %d: '%*.*s'",index+1,(int) queryargsc[index],(int) queryargsc[index],queryargsv[index]);
-			if((queryargsc[index] > 9) && !memcmp(queryargsv[index],"callback=",9)) {
-				strncpy(querycallback,queryargsv[index] + 9,queryargsc[index] - 9);
-				RDEBUG(r,"JSONP callback: %s",querycallback);
-			}
+		if((queryparams = parseFormData(r,r->parsed_uri.query)) == 0) {
+			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "Unable to parse query parameters");
+			return HTTP_INTERNAL_SERVER_ERROR;
 		}
+
+		callback = apr_table_get(queryparams,"callback");
 	}
 
 	/*
@@ -617,7 +611,17 @@ static int redis_handler(request_rec *r) {
 						 * Lazy parse the form data as we need a field from it now
 						 */
 						if(!form && data) {
-							form = parseFormData(r,data);
+							const char * content_type = apr_table_get(r->headers_in,"Content-Type");
+
+							if(!content_type || strcasecmp(content_type,"application/x-www-form-urlencoded")) {
+								ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "Unexpected content type: %s",content_type ? content_type : "null");
+								return HTTP_INTERNAL_SERVER_ERROR;
+							}
+
+							if((form = parseFormData(r,data)) == 0) {
+								ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "Unable to parse form");
+								return HTTP_INTERNAL_SERVER_ERROR;
+							}
 						}
 						if(!form)
 							break;
@@ -625,6 +629,12 @@ static int redis_handler(request_rec *r) {
 						 * Lookup the form field in the table
 						 */
 						fields[index] = apr_table_get(form,alias->tokenfields[index]);
+						items[index] = (size_t) (fields[index] ? strlen(fields[index]) : 0);
+						break;
+
+					case ARG_QUERY_PARAM:
+						RDEBUG(r,"QSA lookup: %s",alias->tokenfields[index]);
+						fields[index] = apr_table_get(queryparams,alias->tokenfields[index]);
 						items[index] = (size_t) (fields[index] ? strlen(fields[index]) : 0);
 						break;
 
@@ -660,7 +670,7 @@ static int redis_handler(request_rec *r) {
 		int alloc = formatReplyAsString(r, reply, responseFormat, NULL, 0xFFFF);
 
 		if(respondAs && !strcmp(respondAs,"jsonp")) {
-			alloc += strlen(querycallback) + 8;
+			alloc += strlen(callback) + 8;
 		}
 
 		char * response = apr_pcalloc(r->pool,alloc + 1);
@@ -671,7 +681,7 @@ static int redis_handler(request_rec *r) {
 				bytes = 0;
 
 			if(respondAs && !strcmp(respondAs,"jsonp")) {
-				offset = sprintf(response,"%s(",querycallback);
+				offset = sprintf(response,"%s(",callback);
 			}
 
 			bytes = formatReplyAsString(r, reply, responseFormat, response + offset, (alloc + 1) - offset);
@@ -694,17 +704,7 @@ static int redis_handler(request_rec *r) {
 		free(path);
 	}
 
-	if (queryargsc) {
-		free(queryargsc);
-	}
-
-	if (queryargsv) {
-		free(queryargsv);
-	}
-
 	sconf->timer1 += clock() - t;
-
-
 
 	return OK;
 }
@@ -794,6 +794,9 @@ static const char * set_alias(cmd_parms *parms, void *in_struct_ptr,const char *
 			} else if((*cmdlen<sizeof(field)) && (sscanf(*cmds, "${FORM:%[^}]}", field) == 1)) {
 				alias->tokenargs[tokens] = ARG_FORM_FIELD;
 				alias->tokenfields[tokens] = apr_pstrdup(parms->pool,field);
+			} else if((*cmdlen<sizeof(field)) && (sscanf(*cmds, "${QSA:%[^}]}", field) == 1)) {
+				alias->tokenargs[tokens] = ARG_QUERY_PARAM;
+				alias->tokenfields[tokens] = apr_pstrdup(parms->pool,field);
 			} else if((*cmdlen == 7) && !memcmp(*cmds,"%{DATA}",7)) {
 				alias->tokenargs[tokens] = ARG_REQUEST_BODY;
 			}
@@ -802,7 +805,7 @@ static const char * set_alias(cmd_parms *parms, void *in_struct_ptr,const char *
 				SDEBUG(" - RedisAlias argument %d, to be replaced with request expression group %d%s%s",
 						tokens,
 						alias->tokenargs[tokens],
-						alias->tokenfields[tokens] ? " form-field: " : "",
+						alias->tokenfields[tokens] ? " field: " : "",
 					    alias->tokenfields[tokens] ? alias->tokenfields[tokens] : "");
 			}
 		}
