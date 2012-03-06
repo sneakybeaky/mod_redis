@@ -24,7 +24,7 @@ Alternatively, appending .jsonp and adding a query parameter ‘callback’ resp
 
 
 Installation
-============
+------------
 
 1. Download Hiredis, a minimalistic C client library for the Redis database
 
@@ -61,16 +61,43 @@ standard REDIS port (6379), this can be modified with command line parameters
 
 
 RedisAlias Directive
-====================
+--------------------
 
 **Description**: Defines a rule to match a URL to a REDIS command  
 **Syntax**:      RedisAlias TestString RedisCommandPattern [Method]  
 
-**TestString** is a regular expression string defining the rule to match. Rules are matched based on
-the order in which they are defined. Expression groups (captured in parentheses) can be referenced
-in the RedisCommandPattern.
+Rules are matched based on the order in which they are defined. Depending on the expression, care
+should be taken not to define less specific expressions before more specific ones. Consider a
+configuraton defining two directives in the following order, in the following example the second
+expression would never be matched because the first expression would evaluate successfully first.
 
-**RedisCommandsPattern** is the pattern used to create a REDIS command to be executed. The format of 
+    RedisAlias ^([^/]+)$ "GET $1"
+    RedisAlias ^ping$    "PONG"
+    
+**TestString**   
+
+A regular expression defining the elements in the URL to match. This excludes the
+protocol, hostname, portnumber, module location and query string. Consider an local installation
+of Apache with mod_redis handler configured for the location `/redis/*`, in the following 
+contrived example, the element of the URL that can be matched against is in square brackets
+
+    http://localhost/redis/[Matchable].json?callback=alert
+    
+Round brackets can used used to create a backreference for part of the matching string which can be 
+later referenced in the RedisCommandPattern. This is essential to extract elements of the URL for 
+use in the REDIS command itself.
+
+    ^([^/]+)/count$
+
+This example matches any characters appearing before the first matching forward slash, followed by 
+a forward slash, the word count and then the end of the string. The round brackets create a 
+backreference, capturing the characters before the forward slash so that it can be used in the 
+RedisCommandPattern, i.e. `"ZCARD $1"`. Using this example the URL `<host>/<handler>/myset/count` 
+would result in the REDIS command `ZCARD myset`. 
+
+**RedisCommandsPattern**  
+
+The pattern used to create a REDIS command to be executed. The format of 
 this command must confirm to the REDIS command syntax. Additionally the text can contain the 
 following:
 
@@ -83,18 +110,31 @@ grouped parts (in parentheses) of the TestString.
     ${FORM:field}   The value of a form field taken from PUT or POST request. The request must have
                include the Content-Type header as application/x-www-form-urlencoded  
 
-* Method: The HTTP method of the given request, GET, PUT, POST or DELETE. When a method is not
-specified, GET is assumed as the default
+**Method**  
 
-Examples
---------
-
-To define aliases which will map a single URL path element to the REDIS commands for KEY 
-manipulation (specifically GET, SET and DELete) you would add the following directives:
+The HTTP method of the given request, GET, PUT, POST or DELETE. When a method is not
+specified, GET is assumed as the default. The Method parameter can be used to increase the 
+specificity of the directive. In the following example, the **TestString** is identical, however 
+the **Method** determines which directive would successfully match.
 
     RedisAlias ^([^/]+)$ "GET $1"
     RedisAlias ^([^/]+)$ "SET $1 %{DATA}" PUT
     RedisAlias ^([^/]+)$ "DEL $1" DELETE
+    
+
+**Examples**  
+
+To define alias to add, remove and count the number of entries in a sorted set, you would add the 
+following directives:
+
+    RedisAlias ^([^/]+)/([^/]+)$ "ZADD $1 %{DATA} $2" PUT  
+    RedisAlias ^([^/]+)/([^/]+)$ "ZREM $1 $2" DELETE  
+    RedisAlias ^([^/]+)/count$ "ZCARD $1"  
+    
+To define an alias to retrive a list of members from a sorted set, you could add the following
+directive:
+
+    RedisAlias ^([^/]+)/range/([^/]+)/([^/]+)$ "ZRANGE $1 $2 $3 WITHSCORES"
 
 To define an alias to create a new member to a sorted set from a POSTed form you could add the 
 following directive:
@@ -103,7 +143,7 @@ following directive:
 
 
 RedisIPAddress Directive
-========================
+------------------------
 
 **Description**: Defines the IP address of the REDIS instance to connect to  
 **Syntax**:      RedisIPAddress IPAddress  
@@ -112,7 +152,7 @@ The default IPAddress is 127.0.0.1
 
 
 RedisPort Directive
-===================
+-------------------
 
 **Description**: Defines the port number of the REDIS instance to connect to  
 **Syntax**:      RedisPort PortNumber  
@@ -121,12 +161,14 @@ The default PortNumber is 6379
 
 
 Example httpd.conf
-==================
+------------------
 
     <Location ~ /redis/*>
     SetHandler redis
     </Location>
 
     <IfModule redis_module>
+    RedisIPAddress 127.0.0.1
+    RedisPort 6379
     RedisAlias ^ping$ "PING"
     </IfModule>
