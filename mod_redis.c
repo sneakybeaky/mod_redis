@@ -43,16 +43,17 @@
 
 #include "hiredis.h"
 
-#define MAX_ADDR		256		/* max server addr length */
-#define CMD_PAGE_SIZE	25
-#define MAX_CONNECT		256
+#define MAX_ADDR					256		/* max server addr length */
+#define CMD_PAGE_SIZE				25
+#define MAX_CONNECT					256
+#define JSONP_CALLBACK_ARGUMENT		"callback"
 
 /*
  * Replacement arguments
  */
-#define ARG_REQUEST_BODY	-1
-#define ARG_FORM_FIELD		-2
-#define ARG_QUERY_PARAM		-3
+#define ARG_REQUEST_BODY			-1
+#define ARG_FORM_FIELD				-2
+#define ARG_QUERY_PARAM				-3
 
 /*
  * macros
@@ -438,13 +439,15 @@ apr_table_t * parseFormData(request_rec *r,const char *data) {
  * mod_redis request handler
  */
 static int redis_handler(request_rec *r) {
-	char * path = 0;
+	const char * path = 0;
 	format * responseFormat = xml;
 	redisReply * reply = 0;
 	char * data = 0;
 	apr_size_t datalen = 0;
 	apr_table_t * queryparams = 0;
 	const char * callback = 0;
+	const char * fileExtension = 0;
+	int isJSONP = 0;
 
 	if(strcmp(r->handler, "redis")) {
 		return DECLINED;
@@ -454,6 +457,12 @@ static int redis_handler(request_rec *r) {
 
 	if(r->header_only) {
 		return OK;
+	}
+
+	path = ((const char *) r->path_info) + ((*r->path_info == '/') ? 1 : 0);
+
+	if((fileExtension = strrchr(path,'.')) == 0) {
+		fileExtension = path + strlen(path);
 	}
 
 	/*
@@ -524,36 +533,14 @@ static int redis_handler(request_rec *r) {
 			return HTTP_INTERNAL_SERVER_ERROR;
 		}
 
-		callback = apr_table_get(queryparams,"callback");
+		callback = apr_table_get(queryparams,JSONP_CALLBACK_ARGUMENT);
 	}
 
-	/*
-	 * copy the path
-	 */
-	if(!(path = calloc(strlen(r->path_info) + 1, sizeof(char)))) {
-		return DECLINED;
-	}
-
-	strcpy(path, ((const char *) r->path_info) + ((*r->path_info == '/') ? 1 : 0));
 
 	/*
 	 * Measure the time taken in this hander
 	 */
 	clock_t t = clock();
-
-	/*
-	 * check return format, this is identified as a suffix to the request
-	 */
-	char * respondAs = strrchr(path, '.');
-
-	if (respondAs && !strcmp(respondAs, ".jsonp")) {
-		responseFormat = json;
-		*respondAs++ = 0;
-
-	} else if (respondAs && !strcmp(respondAs, ".json")) {
-		responseFormat = json;
-		*respondAs++ = 0;
-	}
 
 	/*
 	 * Match the command to a defined alias
@@ -565,7 +552,7 @@ static int redis_handler(request_rec *r) {
 	for (alias_index = 0; alias_index < sconf->count; alias_index++) {
 		memset(matches, 0, sizeof(matches));
 
-		if(ap_regexec(sconf->aliases[alias_index].expression, path, sizeof(matches) / sizeof(ap_regmatch_t), &matches[0], 0))
+		if(ap_regexec_len(sconf->aliases[alias_index].expression, path, fileExtension - path,sizeof(matches) / sizeof(ap_regmatch_t), &matches[0], 0))
 			continue;
 
 		if(sconf->aliases[alias_index].method != r->method_number)
@@ -651,12 +638,21 @@ static int redis_handler(request_rec *r) {
 		reply = execRedisCommandsArgv(r, alias->arguments, fields, items);
 
 	} else {
-		RDEBUG(r,"Unknown command %s", path);
+		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "Unknown command %s", path);
+		return HTTP_INTERNAL_SERVER_ERROR;
 	}
 
 	/*
 	 * Write the response
 	 */
+	if(fileExtension) {
+		if((isJSONP = !strcmp(fileExtension, ".jsonp")) != 0) {
+			responseFormat = json;
+		} else if (!strcmp(fileExtension, ".json")) {
+			responseFormat = json;
+		}
+	}
+
 	if (responseFormat == json) {
 		r->content_type = "application/json";
 	} else {
@@ -666,10 +662,9 @@ static int redis_handler(request_rec *r) {
 	}
 
 	if (reply) {
-
 		int alloc = formatReplyAsString(r, reply, responseFormat, NULL, 0xFFFF);
 
-		if(respondAs && !strcmp(respondAs,"jsonp")) {
+		if(isJSONP) {
 			alloc += strlen(callback) + 8;
 		}
 
@@ -680,13 +675,13 @@ static int redis_handler(request_rec *r) {
 			int offset = 0,
 				bytes = 0;
 
-			if(respondAs && !strcmp(respondAs,"jsonp")) {
+			if(isJSONP) {
 				offset = sprintf(response,"%s(",callback);
 			}
 
 			bytes = formatReplyAsString(r, reply, responseFormat, response + offset, (alloc + 1) - offset);
 
-			if(respondAs && !strcmp(respondAs,"jsonp")) {
+			if(isJSONP) {
 				sprintf(response + offset + bytes,");");
 			}
 
@@ -698,10 +693,6 @@ static int redis_handler(request_rec *r) {
 
 	if (responseFormat == xml) {
 		ap_rputs("</response>\r\n", r);
-	}
-
-	if (path) {
-		free(path);
 	}
 
 	sconf->timer1 += clock() - t;
