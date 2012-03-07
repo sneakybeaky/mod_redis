@@ -867,14 +867,6 @@ static apr_status_t redis_pool_cleanup(void * parm)
 		conf->aliases = 0;
 	}
 
-	/*
-	 * Free the mutex
-	 */
-	if(conf->lock) {
-		apr_thread_mutex_destroy(conf->lock);
-		conf->lock = 0;
-	}
-
 	return APR_SUCCESS;
 }
 
