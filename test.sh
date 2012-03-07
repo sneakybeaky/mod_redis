@@ -154,6 +154,7 @@ fi
 #file
 echo "Configuring httpd and restarting on port 8081..."
 aliases=( '^ping$ PING'
+		  '^nestedquotetest$ "SET %{DATA} \"value with spaces\"" PUT'
      	  '^poster$ "SET ${FORM:key} ${FORM:value}" POST'
      	  '^([^/]+)/([^/]+)$ "ZADD $1 %{DATA} $2" PUT'
      	  '^([^/]+)/([^/]+)$ "ZREM $1 $2" DELETE'
@@ -219,6 +220,10 @@ testGetXML "$testkey" "hello world" '/response/string/text\(\)'
 #testing query string arguments
 testGetXML "$testset/rank?key=user2" "1" '/response/integer/text\(\)'
 testGet "$testset/rank.jsonp?callback=foo\&key=user2" 'foo({ "integer" : "1" });'
+
+#testing embedded quotes
+testPutXML "nestedquotetest" "$testkey" 'OK' '/response/status/text\(\)'
+testGetXML "$testkey" 'value with spaces' '/response/string/text\(\)'
 
 #Clean up and stop our temporary apache instance 
 echo "Cleaning up and stopping test httpd instance (8081)..."

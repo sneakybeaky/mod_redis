@@ -275,9 +275,21 @@ static const char ** parseCommandIntoArgArray(const char * cmd, int len, char de
 
 	while (*cmd) {
 
-		if (*cmd != delimiter) {
+		if(*cmd == '\"') {
+			cmd++;
 			const char * sos = cmd;
-			while (*cmd && *cmd != delimiter) {
+			while (*cmd != '\"') {
+				cmd++;
+			}
+			const char * eos = cmd;
+
+			fields[fieldCount] = sos;
+			items[fieldCount++] = eos - sos;
+			cmd++;
+
+		} else if (*cmd != delimiter) {
+			const char * sos = cmd;
+			while (*cmd && (*cmd != delimiter)) {
 				cmd++;
 			}
 			const char * eos = cmd;
