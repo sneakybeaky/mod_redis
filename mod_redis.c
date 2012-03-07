@@ -645,7 +645,7 @@ static int redis_handler(request_rec *r) {
 	/*
 	 * Write the response
 	 */
-	if(fileExtension) {
+	if(*fileExtension) {
 		if((isJSONP = !strcmp(fileExtension, ".jsonp")) != 0) {
 			responseFormat = json;
 		} else if (!strcmp(fileExtension, ".json")) {
