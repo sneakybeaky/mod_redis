@@ -554,6 +554,9 @@ static int redis_handler(request_rec *r) {
 	 */
 	clock_t t = clock();
 
+	// Remove any file extension
+	path = apr_pstrmemdup(r->pool,path,fileExtension-path);
+
 	/*
 	 * Match the command to a defined alias
 	 */
@@ -564,7 +567,7 @@ static int redis_handler(request_rec *r) {
 	for (alias_index = 0; alias_index < sconf->count; alias_index++) {
 		memset(matches, 0, sizeof(matches));
 
-		if(ap_regexec_len(sconf->aliases[alias_index].expression, path, fileExtension - path,sizeof(matches) / sizeof(ap_regmatch_t), &matches[0], 0))
+		if(ap_regexec(sconf->aliases[alias_index].expression, path, sizeof(matches) / sizeof(ap_regmatch_t), &matches[0], 0))
 			continue;
 
 		if(sconf->aliases[alias_index].method != r->method_number)

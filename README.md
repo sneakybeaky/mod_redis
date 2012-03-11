@@ -132,7 +132,7 @@ following directives:
     RedisAlias ^([^/]+)/([^/]+)$ "ZREM $1 $2" DELETE  
     RedisAlias ^([^/]+)/count$ "ZCARD $1"  
     
-To define an alias to retrive a list of members from a sorted set, you could add the following
+To define an alias to retrieve a list of members from a sorted set, you could add the following
 directive:
 
     RedisAlias ^([^/]+)/range/([^/]+)/([^/]+)$ "ZRANGE $1 $2 $3 WITHSCORES"
