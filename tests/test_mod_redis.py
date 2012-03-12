@@ -26,9 +26,13 @@ class TestModRedis(unittest.TestCase):
     def tearDown(self):
         self.connection.close()
 
-    def assertXmlResponse(self,response,elementName,expected):
+    def responseToXml(self,response):
         self.assertEqual(response.status,httplib.OK,"Got non OK response - %s" % response.status)
         document = ET.fromstring(response.read())
+        return document        
+
+    def assertXmlResponse(self,response,elementName,expected):
+        document = self.responseToXml(response)
 
         statusText = document.findtext(elementName)
         self.assertNotEqual(None,statusText,"Unable to find a status in the response")
