@@ -26,6 +26,11 @@ class TestModRedis(unittest.TestCase):
     def tearDown(self):
         self.connection.close()
 
+    def responseToJson(self,response):
+        self.assertEqual(response.status,httplib.OK,"Got non OK response - %s" % response.status)
+        response = json.loads(response.read())
+        return response
+
     def responseToXml(self,response):
         self.assertEqual(response.status,httplib.OK,"Got non OK response - %s" % response.status)
         document = ET.fromstring(response.read())
@@ -41,9 +46,9 @@ class TestModRedis(unittest.TestCase):
     def assertJsonResponse(self,response,elementName,expected):
         self.assertEqual(response.status,httplib.OK,"Got non OK response - %s" % response.status)
 
-        response = json.loads(response.read())
-        self.assertTrue(elementName in response,"Expected field '%s' not in response" % elementName)
-        self.assertEqual(expected,response[elementName],"Result should have been %s, not %s" % (expected,response[elementName]))
+        data = self.responseToJson(response)
+        self.assertTrue(elementName in data,"Expected field '%s' not in response" % elementName)
+        self.assertEqual(expected,data[elementName],"Result should have been %s, not %s" % (expected,data[elementName]))
     
 
 
