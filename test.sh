@@ -71,7 +71,7 @@ setRedisAlias() {
 
 	#modify the portnumber, loglevel, error and access log locations
 	cat $httpd_root/$config | 
-		sed 's/Listen 80/Listen 8081/' | 
+		sed 's/Listen [0-9]*/Listen 8081/' | 
 		sed 's/LogLevel .*/LogLevel debug/' | 
 		sed "s/ErrorLog.*/ErrorLog $sedcwd\/$testingdir\/error.log/" | 
 		sed "s/CustomLog .* /CustomLog $sedcwd\/$testingdir\/access.log /" > "$configfile"
@@ -140,7 +140,8 @@ fi
 
 #ensure REDIS is running locally
 echo "Testing connection to REDIS on $redisipaddress:$redisportnumber..."
-redis_ping=`(sleep 2; echo "PING") | telnet $redisipaddress $redisportnumber | grep '+PONG'`
+redis_ping=`redis-cli -h ${redisipaddress} -p ${redisportnumber} PING | grep 'PONG'`
+
 if [ -z $redis_ping ]; then 
 	echo '**FAIL**'
 	echo "******** Unable to determine if REDIS is running"
