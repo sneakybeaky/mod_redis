@@ -35,8 +35,14 @@ class TestSortedSet(test_mod_redis.TestModRedis):
             self.assertEqual("%d" % i,scoreElement.text)
             allStringsFromResponse = allStringsFromResponse[2:]
 
-        
-             
+        # Test ZREM
+        self.connection.request("DELETE","/redis/testset%(randomValue)d/user14" % {"randomValue":randomValue}) 
+        #print self.connection.getresponse()            
+        self.assertXmlResponse(self.connection.getresponse(),"integer","1")
+
+        # Ensure there are 14 members left
+        self.connection.request("GET","/redis/testset%(randomValue)d/count" % {"randomValue":randomValue})
+        self.assertXmlResponse(self.connection.getresponse(),"integer","14")
 
     def testAddFifteenItemsJson(self):
     

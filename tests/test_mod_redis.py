@@ -43,7 +43,7 @@ class TestModRedis(unittest.TestCase):
 
         response = json.loads(response.read())
         self.assertTrue(elementName in response,"Expected field '%s' not in response" % elementName)
-        self.assertEqual(expected,response[elementName],"Result should have been '%s', not '%s'" % (expected,response[elementName]))
+        self.assertEqual(expected,response[elementName],"Result should have been %s, not %s" % (expected,response[elementName]))
     
 
 
