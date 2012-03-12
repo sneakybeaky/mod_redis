@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 
 class TestSortedSet(test_mod_redis.TestModRedis):
 
-    def testRangeOperationsXml(self):
+    def testSortedSetOperationsXml(self):
     
         randomValue = random.randint(0,sys.maxint)
 
@@ -43,7 +43,7 @@ class TestSortedSet(test_mod_redis.TestModRedis):
         self.connection.request("GET","/redis/testset%(randomValue)d/count" % {"randomValue":randomValue})
         self.assertXmlResponse(self.connection.getresponse(),"integer","14")
 
-    def testRangeOperationsJson(self):
+    def testSortedSetOperationsJson(self):
     
         randomValue = random.randint(0,sys.maxint)
 
