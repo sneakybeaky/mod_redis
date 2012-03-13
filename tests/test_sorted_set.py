@@ -1,6 +1,4 @@
 import urllib
-import random
-import sys
 
 import test_mod_redis
 import xml.etree.ElementTree as ET
