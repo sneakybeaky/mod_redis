@@ -24,6 +24,13 @@ class TestPutGetDelete(test_mod_redis.TestModRedis):
         self.connection.request("GET","/redis/%(testKey)s" % {"testKey":testKey})
         self.assertXmlResponse(self.connection.getresponse(),"string","expectedValue")
 
+        # Delete the key
+        self.connection.request("DELETE","/redis/%(testKey)s" % {"testKey":testKey})
+        self.assertXmlResponse(self.connection.getresponse(),"integer","1")
+
+        # Make sure key is empty
+        self.connection.request("GET","/redis/%(testKey)s" % {"testKey":testKey})
+        self.assertXmlResponseIsNil(self.connection.getresponse())
         
 
         
