@@ -157,7 +157,7 @@ echo "Configuring httpd and restarting on port 8081..."
 aliases=( '^ping$ PING'
 		  '^nestedquotetest$ "SET %{DATA} \"value with spaces\"" PUT'
      	  '^poster$ "SET ${FORM:key} ${FORM:value}" POST'
-          'RedisAlias ^([^/]+)/next$ "INCR $1" GET'
+          '^([^/]+)/next$ "INCR $1" GET'
      	  '^([^/]+)/([^/]+)$ "ZADD $1 %{DATA} $2" PUT'
      	  '^([^/]+)/([^/]+)$ "ZREM $1 $2" DELETE'
      	  '^([^/]+)/count$ "ZCARD $1"'
