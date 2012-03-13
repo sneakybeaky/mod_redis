@@ -3,7 +3,8 @@ import unittest
 import test_sorted_set
 import test_ping
 import test_put_get_delete
-
+import test_unicode
+import sys
 
 if __name__ == '__main__':
 
@@ -11,5 +12,6 @@ if __name__ == '__main__':
     suite = unittest.TestSuite() 
     suite.addTests(loader.loadTestsFromModule(test_ping))   
     suite.addTests(loader.loadTestsFromModule(test_sorted_set))       
-    suite.addTests(loader.loadTestsFromModule(test_put_get_delete))       
+    suite.addTests(loader.loadTestsFromModule(test_put_get_delete))           
+    suite.addTests(loader.loadTestsFromModule(test_unicode))       
     unittest.TextTestRunner(verbosity=2).run(suite)
