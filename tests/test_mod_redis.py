@@ -36,6 +36,9 @@ class TestModRedis(unittest.TestCase):
         document = ET.fromstring(response.read())
         return document
 
+    def assertJsonResponseIsNil(self,response):
+        self.assertJsonResponse(response,'nil','nil')
+
     def assertXmlResponseIsNil(self,response):
         document = self.responseToXml(response)
         response = document.findtext('nil')

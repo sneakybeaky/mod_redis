@@ -40,7 +40,39 @@ class TestPutGetDelete(test_mod_redis.TestModRedis):
         self.assertXmlResponseIsNil(self.connection.getresponse())
         
 
-        
+    def testCRUDJson(self):
+        testKey = "testcrudkey%d" % (self.getNextCounterValue())
+        expectedValue = "expectedValue"        
+        expectedValue2 = "expectedValue2"
 
+        # Make sure key is empty
+        self.connection.request("GET","/redis/%(testKey)s.json" % {"testKey":testKey})
+        self.assertJsonResponseIsNil(self.connection.getresponse())
+
+        # Populate the key
+        headers = {"Content-type": "application/x-www-form-urlencoded"}
+        self.connection.request("PUT","/redis/%(testKey)s.json" % {"testKey":testKey},expectedValue,headers)
+        self.assertJsonResponse(self.connection.getresponse(),"status","OK")
+
+        # Read the key
+        self.connection.request("GET","/redis/%(testKey)s.json" % {"testKey":testKey})
+        self.assertJsonResponse(self.connection.getresponse(),"string",expectedValue)
+
+        # Update the key
+        headers = {"Content-type": "application/x-www-form-urlencoded"}
+        self.connection.request("PUT","/redis/%(testKey)s.json" % {"testKey":testKey},expectedValue2,headers)
+        self.assertJsonResponse(self.connection.getresponse(),"status","OK")
+
+        # Read the key
+        self.connection.request("GET","/redis/%(testKey)s.json" % {"testKey":testKey})
+        self.assertJsonResponse(self.connection.getresponse(),"string",expectedValue2)
+
+        # Delete the key
+        self.connection.request("DELETE","/redis/%(testKey)s.json" % {"testKey":testKey})
+        self.assertJsonResponse(self.connection.getresponse(),"integer","1")
+
+        # Make sure key is empty
+        self.connection.request("GET","/redis/%(testKey)s.json" % {"testKey":testKey})
+        self.assertJsonResponseIsNil(self.connection.getresponse())
 
 
