@@ -8,22 +8,22 @@ import xml.etree.ElementTree as ET
 class TestSortedSet(test_mod_redis.TestModRedis):
 
     def testSortedSetOperationsXml(self):
-    
-        randomValue = random.randint(0,sys.maxint)
+
+        setName = "testset%d" % (self.getNextCounterValue())
 
         headers = {"Content-type": "application/x-www-form-urlencoded"}
         
         for i in range(15):
-            self.connection.request("PUT","/redis/testset%(randomValue)d/user%(user)d" % {"randomValue":randomValue,"user":i} ,"%s" % i,headers)            
+            self.connection.request("PUT","/redis/%(setName)s/user%(user)d" % {"setName":setName,"user":i} ,"%s" % i,headers)            
 
             self.assertXmlResponse(self.connection.getresponse(),"integer","1")
 
         # Ensure there are 15 members of this set
-        self.connection.request("GET","/redis/testset%(randomValue)d/count" % {"randomValue":randomValue})
+        self.connection.request("GET","/redis/%(setName)s/count" % {"setName":setName})
         self.assertXmlResponse(self.connection.getresponse(),"integer","15")
 
         # Test range functionality
-        self.connection.request("GET","/redis/testset%(randomValue)d/range/0/14" % {"randomValue":randomValue})
+        self.connection.request("GET","/redis/%(setName)s/range/0/14" % {"setName":setName})
         document = self.responseToXml(self.connection.getresponse())
 
         allStringsFromResponse = document.findall('array/string')
@@ -36,30 +36,30 @@ class TestSortedSet(test_mod_redis.TestModRedis):
             allStringsFromResponse = allStringsFromResponse[2:]
 
         # Test ZREM
-        self.connection.request("DELETE","/redis/testset%(randomValue)d/user14" % {"randomValue":randomValue}) 
+        self.connection.request("DELETE","/redis/%(setName)s/user14" % {"setName":setName}) 
         self.assertXmlResponse(self.connection.getresponse(),"integer","1")
 
         # Ensure there are 14 members left
-        self.connection.request("GET","/redis/testset%(randomValue)d/count" % {"randomValue":randomValue})
+        self.connection.request("GET","/redis/%(setName)s/count" % {"setName":setName})
         self.assertXmlResponse(self.connection.getresponse(),"integer","14")
 
     def testSortedSetOperationsJson(self):
     
-        randomValue = random.randint(0,sys.maxint)
+        setName = "testset%d" % (self.getNextCounterValue())
 
         headers = {"Content-type": "application/x-www-form-urlencoded"}
         
         for i in range(15):
-            self.connection.request("PUT","/redis/testset%(randomValue)d/user%(user)d.json" % {"randomValue":randomValue,"user":i} ,"%s" % i,headers)            
+            self.connection.request("PUT","/redis/%(setName)s/user%(user)d.json" % {"setName":setName,"user":i} ,"%s" % i,headers)            
 
             self.assertJsonResponse(self.connection.getresponse(),"integer","1")
 
         # Ensure there are 15 members of this set
-        self.connection.request("GET","/redis/testset%(randomValue)d/count.json" % {"randomValue":randomValue})
+        self.connection.request("GET","/redis/%(setName)s/count.json" % {"setName":setName})
         self.assertJsonResponse(self.connection.getresponse(),"integer","15")
 
         # Test range functionality
-        self.connection.request("GET","/redis/testset%(randomValue)d/range/0/14.json" % {"randomValue":randomValue})
+        self.connection.request("GET","/redis/%(setName)s/range/0/14.json" % {"setName":setName})
         data = self.responseToJson(self.connection.getresponse())
         allStringsFromResponse = data['array']
         self.assertEqual(30,len(allStringsFromResponse))
@@ -71,9 +71,9 @@ class TestSortedSet(test_mod_redis.TestModRedis):
             allStringsFromResponse = allStringsFromResponse[2:]
 
         # Test ZREM
-        self.connection.request("DELETE","/redis/testset%(randomValue)d/user14.json" % {"randomValue":randomValue}) 
+        self.connection.request("DELETE","/redis/%(setName)s/user14.json" % {"setName":setName}) 
         self.assertJsonResponse(self.connection.getresponse(),"integer","1")
 
         # Ensure there are 14 members left
-        self.connection.request("GET","/redis/testset%(randomValue)d/count.json" % {"randomValue":randomValue})
+        self.connection.request("GET","/redis/%(setName)s/count.json" % {"setName":setName})
         self.assertJsonResponse(self.connection.getresponse(),"integer","14")

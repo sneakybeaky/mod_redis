@@ -34,7 +34,13 @@ class TestModRedis(unittest.TestCase):
     def responseToXml(self,response):
         self.assertEqual(response.status,httplib.OK,"Got non OK response - %s" % response.status)
         document = ET.fromstring(response.read())
-        return document        
+        return document
+
+    def assertXmlResponseIsNil(self,response):
+        document = self.responseToXml(response)
+        response = document.findtext('nil')
+        self.assertNotEqual(None,response,"Unable to find a status in the response")         
+        self.assertTrue(len(response)==0,"nil element should be an empty string");
 
     def assertXmlResponse(self,response,elementName,expected):
         document = self.responseToXml(response)
@@ -44,11 +50,16 @@ class TestModRedis(unittest.TestCase):
         self.assertEqual(expected,statusText,"Status should have been '%s', not '%s'" % (expected,statusText) )
         
     def assertJsonResponse(self,response,elementName,expected):
-        self.assertEqual(response.status,httplib.OK,"Got non OK response - %s" % response.status)
-
         data = self.responseToJson(response)
         self.assertTrue(elementName in data,"Expected field '%s' not in response" % elementName)
         self.assertEqual(expected,data[elementName],"Result should have been %s, not %s" % (expected,data[elementName]))
+
+    def getNextCounterValue(self):
+        self.connection.request("GET","/redis/testcounter/next.json")
+
+        data = self.responseToJson(self.connection.getresponse()) 
+        self.assertTrue('integer' in data,"Expected field 'integer' not in response")
+        return int(data['integer'])
     
 
 

@@ -42,7 +42,7 @@ function testXML {
 	curlcmd="curl -s $curlparms http://localhost:8081/redis/$2"
 	eval $curlcmd  > "$testingdir/testout"
 	
-	xpathcmd="xpath"
+	xpathcmd="xpath -e"
 	
 	if [ "$4" == "xpath" ]; then
 		result=`eval "cat $testingdir/testout | $xpathcmd $5 2> /dev/null"`
@@ -157,6 +157,7 @@ echo "Configuring httpd and restarting on port 8081..."
 aliases=( '^ping$ PING'
 		  '^nestedquotetest$ "SET %{DATA} \"value with spaces\"" PUT'
      	  '^poster$ "SET ${FORM:key} ${FORM:value}" POST'
+          'RedisAlias ^([^/]+)/next$ "INCR $1" GET'
      	  '^([^/]+)/([^/]+)$ "ZADD $1 %{DATA} $2" PUT'
      	  '^([^/]+)/([^/]+)$ "ZREM $1 $2" DELETE'
      	  '^([^/]+)/count$ "ZCARD $1"'
