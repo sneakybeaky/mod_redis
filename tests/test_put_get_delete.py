@@ -20,8 +20,9 @@ class TestPutGetDelete(test_mod_redis.TestModRedis):
         self.connection.request("PUT","/redis/%(testKey)s" % {"testKey":testKey},expectedValue,headers)
         self.assertXmlResponse(self.connection.getresponse(),"status","OK")
 
-        
-        
+        # Read the key
+        self.connection.request("GET","/redis/%(testKey)s" % {"testKey":testKey})
+        self.assertXmlResponse(self.connection.getresponse(),"string","expectedValue")
 
         
 
