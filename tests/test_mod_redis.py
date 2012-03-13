@@ -63,6 +63,11 @@ class TestModRedis(unittest.TestCase):
         data = self.responseToJson(self.connection.getresponse()) 
         self.assertTrue('integer' in data,"Expected field 'integer' not in response")
         return int(data['integer'])
+
+    def deleteRedisKey(self,path):
+        self.connection.request("DELETE",path)
+        self.connection.close()
+
     
 
 
