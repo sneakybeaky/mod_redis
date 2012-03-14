@@ -12,7 +12,10 @@ from optparse import OptionParser
 
 def main():
     parseOptions()
-    runTests()
+    testResults = runTests()
+    
+    if not testResults.wasSuccessful():
+        sys.exit(1)
 
 def parseOptions():
 
@@ -34,7 +37,8 @@ def runTests():
     suite.addTests(loader.loadTestsFromModule(test_put_get_delete))           
     suite.addTests(loader.loadTestsFromModule(test_unicode))           
     suite.addTests(loader.loadTestsFromModule(test_jsonp))       
-    unittest.TextTestRunner(verbosity=2).run(suite)
+    return unittest.TextTestRunner(verbosity=2).run(suite)
+
 
 if __name__ == '__main__':
     main()
