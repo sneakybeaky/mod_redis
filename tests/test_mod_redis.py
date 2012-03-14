@@ -6,6 +6,9 @@ import xml.etree.ElementTree as ET
 
 class TestModRedis(unittest.TestCase):
 
+    servername = "localhost"
+    port = "80"
+
     """
 
     A test class for the mod_redis apache module.
@@ -21,7 +24,7 @@ class TestModRedis(unittest.TestCase):
         setUp is called before each test function execution.
 
         """
-        self.connection = httplib.HTTPConnection("localhost:8081")
+        self.connection = httplib.HTTPConnection("%s:%s" % (self.servername,self.port) )
 
     def tearDown(self):
         self.connection.close()

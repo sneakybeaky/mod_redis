@@ -6,9 +6,27 @@ import test_put_get_delete
 import test_unicode
 import test_jsonp
 import sys
+from test_mod_redis import TestModRedis
 
-if __name__ == '__main__':
+from optparse import OptionParser
 
+def main():
+    parseOptions()
+    runTests()
+
+def parseOptions():
+
+    parser = OptionParser()
+    parser.add_option("-s", "--servername", dest="servername",
+                  help="Apache server hostname", type="string", default="localhost")
+    parser.add_option("-p", "--port", dest="port",
+                  help="Apache server port", type="int", default="8081")
+
+    (options, args) = parser.parse_args()
+    TestModRedis.servername = options.servername
+    TestModRedis.port = options.port
+
+def runTests():
     loader = unittest.TestLoader()
     suite = unittest.TestSuite() 
     suite.addTests(loader.loadTestsFromModule(test_ping))   
@@ -17,3 +35,9 @@ if __name__ == '__main__':
     suite.addTests(loader.loadTestsFromModule(test_unicode))           
     suite.addTests(loader.loadTestsFromModule(test_jsonp))       
     unittest.TextTestRunner(verbosity=2).run(suite)
+
+if __name__ == '__main__':
+    main()
+
+
+
