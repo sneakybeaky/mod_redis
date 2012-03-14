@@ -29,6 +29,24 @@ class TestSortedSet(test_mod_redis.TestModRedis):
 
         self.assertEqual(foundstrings,set(['user13','13','user12','12']))
 
+    def testZrevrangeFromFormJson(self):
+
+        self.addFifteenUsers()
+
+        headers = {"Content-type": "application/x-www-form-urlencoded"}
+        params = urllib.urlencode({'from': 1, 'to': 2})
+        self.connection.request("POST","/redis/%(setName)s/revrange.json" % {"setName":self.setName},params,headers)
+
+        data = self.responseToJson(self.connection.getresponse())
+        allStringsFromResponse = data['array']
+ 
+        foundstrings = set()
+        for nameAndValue in allStringsFromResponse:
+            foundstrings.add(nameAndValue['string'])
+
+        self.assertEqual(foundstrings,set(['user13','13','user12','12']))
+
+
 
     def addFifteenUsers(self):    
         headers = {"Content-type": "application/x-www-form-urlencoded"}
