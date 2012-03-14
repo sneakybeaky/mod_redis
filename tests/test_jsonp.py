@@ -19,7 +19,7 @@ class TestJsonp(test_mod_redis.TestModRedis):
         # Populate the key
         headers = {"Content-type": "application/x-www-form-urlencoded"}
         self.connection.request("PUT",self.testKey,expectedValue,headers)
-        self.assertXmlResponse(self.connection.getresponse(),"status","OK")
+        self.assertXmlResponse(self.connection.getresponse(),{"status":"OK"})
 
         # Read the key
         self.connection.request("GET","%(testKey)s.jsonp?callback=foo" % {"testKey":self.testKey})

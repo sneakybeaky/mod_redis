@@ -48,13 +48,15 @@ class TestModRedis(unittest.TestCase):
         self.assertNotEqual(None,response,"Unable to find a status in the response")         
         self.assertTrue(len(response)==0,"nil element should be an empty string");
 
-    def assertXmlResponse(self,response,elementName,expected):
+    def assertXmlResponse(self,response,expectedNamesAndValues):
         document = self.responseToXml(response)
 
-        statusText = document.findtext(elementName)
-        self.assertNotEqual(None,statusText,"Unable to find a status in the response")
-        self.assertEqual(expected,statusText,"Status should have been '%s', not '%s'" % (expected,statusText) )
-        
+        for (name,value) in expectedNamesAndValues.items():
+            statusText = document.findtext(name)
+            self.assertNotEqual(None,statusText,"Unable to find a field called '%s' in the response" % name)
+            self.assertEqual(value,statusText,"Status should have been '%s', not '%s'" % (value,statusText) )
+
+
     def assertJsonResponse(self,response,elementName,expected):
         data = self.responseToJson(response)
         self.assertTrue(elementName in data,"Expected field '%s' not in response" % elementName)

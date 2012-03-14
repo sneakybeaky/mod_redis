@@ -9,7 +9,7 @@ class TestSortedSet(test_mod_redis.TestModRedis):
     def testPingAsXML(self):
         self.connection.request("GET","/redis/ping")
 
-        self.assertXmlResponse(self.connection.getresponse(),"status","PONG")
+        self.assertXmlResponse(self.connection.getresponse(),{"status":"PONG"})
 
             	
     def testPingAsJSON(self):
