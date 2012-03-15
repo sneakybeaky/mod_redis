@@ -140,7 +140,6 @@ fi
 
 #ensure REDIS is running locally
 echo "Testing connection to REDIS on $redisipaddress:$redisportnumber..."
-#redis_ping=`redis-cli -h ${redisipaddress} -p ${redisportnumber} PING | grep 'PONG'`
 python scripts/ping_redis.py -s ${redisipaddress} -p ${redisportnumber}
 OUT=$?
 

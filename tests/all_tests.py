@@ -5,6 +5,7 @@ import test_ping
 import test_put_get_delete
 import test_unicode
 import test_jsonp
+import test_post_form
 import sys
 from test_mod_redis import TestModRedis
 
@@ -36,6 +37,7 @@ def runTests():
     suite.addTests(loader.loadTestsFromModule(test_put_get_delete))           
     suite.addTests(loader.loadTestsFromModule(test_unicode))           
     suite.addTests(loader.loadTestsFromModule(test_jsonp))       
+    suite.addTests(loader.loadTestsFromModule(test_post_form))       
     return unittest.TextTestRunner(verbosity=2).run(suite)
 
 
