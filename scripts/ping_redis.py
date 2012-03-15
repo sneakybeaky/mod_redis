@@ -6,13 +6,16 @@ import sys
 import telnetlib
 
 def pingRedis(host,port):
-    tn = telnetlib.Telnet(host,port)
+    try:
+        tn = telnetlib.Telnet(host,port)
 
-    tn.write("PING\r\n")
-    response = tn.read_until("+PONG",5)
-    print response
+        tn.write("PING\r\n")
+        response = tn.read_until("+PONG",5)
+        print response
 
-    return response == "+PONG"
+        return response == "+PONG"
+    except:
+        return 0
     
 
 def parseOptions():
