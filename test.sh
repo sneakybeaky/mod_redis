@@ -174,67 +174,10 @@ apachectl -f `pwd`"/$configfile" -k start
 
 #we have a new instance of Apache running, start the tests
 echo "Running tests..."
-testGetXML 'ping' 'PONG' '/response/status/text\(\)'
 
-#testing Z... commands, populate a sorted set 'test' with 15 items 
-for i in {1..15}
-do
-	testPutXML "$testset/user$i" "$i" '1' 'count\(/response/integer\)'
-done
-testGetXML "$testset/count" '15' '/response/integer/text\(\)'
+cd tests 
+python all_tests.py
 
-#testing ZRANGE
-testGetXML "$testset/range/1/2" '4' 'count\(/response/array/string\)'
-testGetXML "$testset/range/1/2" 'user2' '/response/array/string[1]/text\(\)'
-testGetXML "$testset/range/1/2" '2' '/response/array/string[2]/text\(\)'
-testGetXML "$testset/range/1/2" 'user3' '/response/array/string[3]/text\(\)'
-testGetXML "$testset/range/1/2" '3' '/response/array/string[4]/text\(\)'
-testGetXML "$testset/range/0/14" '30' 'count\(/response/array/string\)'
-
-#testing ZREM
-testDelXML "$testset/user15" '1' 'count\(/response/integer\)'
-testGetXML "$testset/count" '14' '/response/integer/text\(\)'
-
-#testing GET, PUT and DELETE
-testPutXML "$testkey" 'bar' 'OK' '/response/status/text\(\)'
-testGetXML "$testkey" 'bar' '/response/string/text\(\)'
-testDelXML "$testkey" '1' '/response/integer/text\(\)'
-testGetXML "$testkey" '' '/response/string/text\(\)'
-
-#testing GET and PUT with Unicode characters
-testPutXML "$testkey" 'Миф с' 'OK' '/response/status/text\(\)'
-testGetXML "$testkey" 'Миф с' '/response/string/text\(\)'
-
-#testing JSON response
-testGet "$testkey.json" '{ "string" : "Миф с" }'
-testGet "$testkey.json" 'Миф с'
-testGet "$testset/range/1/1.json" '{ "array" : \[ { "string" : "user2" },{ "string" : "2" } \] }'
-
-#testing JSONP response
-testGet "$testkey.jsonp?callback=foo" 'foo({ "string" : "Миф с" });'
-
-#testing ZREVRANGE with form parameters
-testPostXML "$testset/revrange" "from=1&to=2" '4' 'count\(/response/array/string\)'
-
-#testing POSTing form parameters
-testPostXML "poster" "key=$testkey&value=hello%20world" 'OK' '/response/status/text\(\)'
-testGetXML "$testkey" "hello world" '/response/string/text\(\)'
-
-#testing query string arguments
-testGetXML "$testset/rank?key=user2" "1" '/response/integer/text\(\)'
-testGet "$testset/rank.jsonp?callback=foo\&key=user2" 'foo({ "integer" : "1" });'
-
-#testing embedded quotes
-testPutXML "nestedquotetest" "$testkey" 'OK' '/response/status/text\(\)'
-testGetXML "$testkey" 'value with spaces' '/response/string/text\(\)'
-
-#Clean up and stop our temporary apache instance 
-echo "Cleaning up and stopping test httpd instance (8081)..."
-for i in {1..15}
-do
-	curl -s --request DELETE "http://localhost/redis/$testset/user$i" > /dev/null	
-done
-curl -s --request DELETE "http://localhost/redis/$testkey" > /dev/null	
 apachectl -f `pwd`"/$configfile" -k stop 2> /dev/null
 
 
