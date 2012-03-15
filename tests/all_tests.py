@@ -14,8 +14,7 @@ def main():
     parseOptions()
     testResults = runTests()
     
-    if not testResults.wasSuccessful():
-        sys.exit(1)
+    sys.exit(testResults.wasSuccessful() == 0)
 
 def parseOptions():
 
