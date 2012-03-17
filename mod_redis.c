@@ -906,7 +906,7 @@ static void *redis_create_config(apr_pool_t *p, server_rec *s)
         apr_thread_mutex_create(&sconf->lock, APR_THREAD_MUTEX_DEFAULT, p);
     }
 
-	strcpy(sconf->ip, "127.0.0.1");
+	sconf->ip = apr_pstrdup(p, "127.0.0.1");
 	sconf->port = 6379;
 	sconf->timeout = 1500;
 	sconf->server = s;
