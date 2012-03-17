@@ -61,6 +61,8 @@
 #define RDEBUG(r,format,...) { if(sconf->loglevel==APLOG_DEBUG) ap_log_rerror(APLOG_MARK,APLOG_DEBUG,0,r,format,## __VA_ARGS__); }
 #define SDEBUG(format,...) { if(sconf->server) ap_log_error(APLOG_MARK,APLOG_DEBUG,0,sconf->server,format,## __VA_ARGS__); }
 
+module AP_MODULE_DECLARE_DATA redis_module;
+
 /*
  * RedisAlias definitions
  */
@@ -86,7 +88,7 @@ typedef struct mod_redis_conf {
 	server_rec * server;
 
 	redisContext * context;
-	char ip[MAX_ADDR];
+	char *ip;
 	int port;
 	int timeout;
 
@@ -716,11 +718,13 @@ static int redis_handler(request_rec *r) {
 }
 
 static const char * set_ip_address(cmd_parms *parms, void *in_struct_ptr, const char *arg) {
-	if (strlen(arg) < 0) {
-		return "RedisIPAddress argument must be an string representing an server address";
+	if (strlen(arg) == 0) {
+		return "RedisIPAddress argument must be a string representing a server address";
 	}
+	
+	mod_redis_conf *conf = ap_get_module_config(parms->server->module_config, &redis_module);
+	conf->ip = apr_pstrdup(parms->pool, arg);
 
-	snprintf(sconf->ip, MAX_ADDR, "%s", arg);
 	return NULL;
 }
 
@@ -728,10 +732,12 @@ static const char * set_port(cmd_parms *parms, void *in_struct_ptr, const char *
 	int port;
 
 	if (sscanf(arg, "%d", &port) != 1) {
-		return "RedisIPAddress argument must be an integer representing the port number";
+		return "RedisPort argument must be an integer representing the port number";
 	}
-
-	sconf->port = port;
+	
+	mod_redis_conf *conf = ap_get_module_config(parms->server->module_config, &redis_module);	
+	conf->port = port;
+	
 	return NULL;
 }
 
@@ -739,26 +745,30 @@ static const char * set_timeout(cmd_parms *parms, void *in_struct_ptr, const cha
 	int timeout;
 
 	if (sscanf(arg, "%d", &timeout) != 1) {
-		return "RedisIPAddress argument must be an integer representing the port number";
+		return "RedisTimeout argument must be an integer representing the timeout setting for a connection";
 	}
 
-	sconf->timeout = timeout;
+	mod_redis_conf *conf = ap_get_module_config(parms->server->module_config, &redis_module);	
+	conf->timeout = timeout;
+	
 	return NULL;
 }
 
 static const char * set_alias(cmd_parms *parms, void *in_struct_ptr,const char *w, const char *w2,const char *w3) {
 	cmd_alias * aliases;
-	if ((aliases = apr_pcalloc(parms->pool,sizeof(cmd_alias) * (sconf->count + 1))) == 0) {
+	mod_redis_conf *conf = ap_get_module_config(parms->server->module_config, &redis_module);	
+
+	if ((aliases = apr_pcalloc(parms->pool,sizeof(cmd_alias) * (conf->count + 1))) == 0) {
 		return "Failed to allocate memory for the alias configuration";
 	}
 
-	if (sconf->aliases) {
-		memcpy(aliases, sconf->aliases, sizeof(cmd_alias) * sconf->count);
+	if (conf->aliases) {
+		memcpy(aliases, conf->aliases, sizeof(cmd_alias) * conf->count);
 	}
 
-	sconf->aliases = aliases;
+	conf->aliases = aliases;
 
-	cmd_alias * alias = &sconf->aliases[sconf->count];
+	cmd_alias * alias = &conf->aliases[conf->count];
 	alias->tokenargs = 0;
 
 	if ((alias->command = apr_pcalloc(parms->pool,strlen(w2) + 1)) != 0) {
@@ -830,7 +840,7 @@ static const char * set_alias(cmd_parms *parms, void *in_struct_ptr,const char *
 		}
 	}
 
-	sconf->count++;
+	conf->count++;
 
 	return NULL;
 }
