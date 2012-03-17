@@ -58,8 +58,12 @@
 /*
  * macros
  */
-#define RDEBUG(r,format,...) { if(sconf->loglevel==APLOG_DEBUG) ap_log_rerror(APLOG_MARK,APLOG_DEBUG,0,r,format,## __VA_ARGS__); }
-#define SDEBUG(format,...) { if(sconf->server) ap_log_error(APLOG_MARK,APLOG_DEBUG,0,sconf->server,format,## __VA_ARGS__); }
+#define RDEBUG(conf,r,format,...) { \
+	 if(conf->loglevel==APLOG_DEBUG) ap_log_rerror(APLOG_MARK,APLOG_DEBUG,0,r,format,## __VA_ARGS__); \
+	}
+#define SDEBUG(conf,format,...) { \
+	if(conf->server) ap_log_error(APLOG_MARK,APLOG_DEBUG,0,conf->server,format,## __VA_ARGS__); \
+	}
 
 module AP_MODULE_DECLARE_DATA redis_module;
 
@@ -103,7 +107,6 @@ typedef struct mod_redis_conf {
 
 } mod_redis_conf;
 
-static mod_redis_conf * sconf = 0;
 static int threaded_mpm = 0;
 
 /*
@@ -313,33 +316,35 @@ static redisReply * execRedisCommandsArgv(request_rec *r, int args, const char *
 {
 	redisReply * reply = 0;
 	struct timeval timeout;
+	
+	mod_redis_conf *conf = ap_get_module_config(r->server->module_config, &redis_module);	
 
-	if (sconf->lock) {
-		apr_thread_mutex_lock(sconf->lock);
+	if (conf->lock) {
+		apr_thread_mutex_lock(conf->lock);
 	}
 
 	/*
 	 * Connect to the server if required
 	 */
-	if (!sconf->context) {
-		timeout.tv_sec = sconf->timeout / 1000;
-		timeout.tv_usec = (sconf->timeout - (timeout.tv_sec * 1000)) * 1000;
+	if (!conf->context) {
+		timeout.tv_sec = conf->timeout / 1000;
+		timeout.tv_usec = (conf->timeout - (timeout.tv_sec * 1000)) * 1000;
 
-		RDEBUG(r,"Connecting to REDIS on %s:%d (%d)", sconf->ip, sconf->port, sconf->timeout);
-		sconf->context = redisConnectWithTimeout(sconf->ip,sconf->port,timeout);
+		RDEBUG(conf,r,"Connecting to REDIS on %s:%d (%d)", conf->ip, conf->port, conf->timeout);
+		conf->context = redisConnectWithTimeout(conf->ip,conf->port,timeout);
 
-		if((!sconf->context) || (sconf->context->err != REDIS_OK)) {
-			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "Connection to REDIS failed to %s:%d", sconf->ip, sconf->port);
+		if((!conf->context) || (conf->context->err != REDIS_OK)) {
+			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "Connection to REDIS failed to %s:%d", conf->ip, conf->port);
 		}
     }
 
-	if (sconf->context && (sconf->context->err == 0)) {
+	if (conf->context && (conf->context->err == 0)) {
 
 		if (!(reply = calloc(1, sizeof(redisReply)))) {
 			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,"Failed to allocate memory for reply");
 		} else {
 
-			RDEBUG(r,"Command: %*.*s", (int) argc[0],(int) argc[0],argv[0]);
+			RDEBUG(conf,r,"Command: %*.*s", (int) argc[0],(int) argc[0],argv[0]);
 
 			int response = 0,
 				index	 = 0,
@@ -362,19 +367,19 @@ static redisReply * execRedisCommandsArgv(request_rec *r, int args, const char *
 			if(!match) {
 
 				clock_t t = clock();
-				if (redisAppendCommandArgv(sconf->context, args, argv, argc) != REDIS_ERR) {
-					response = redisGetReply(sconf->context, (void **) &reply);
+				if (redisAppendCommandArgv(conf->context, args, argv, argc) != REDIS_ERR) {
+					response = redisGetReply(conf->context, (void **) &reply);
 				}
-				sconf->timer2 += clock() - t;
+				conf->timer2 += clock() - t;
 			}
 
 			/*
 			 * Debug dump the response
 			 */
-			if(sconf->loglevel == APLOG_DEBUG) {
+			if(conf->loglevel == APLOG_DEBUG) {
 				char s[256] = "";
 				formatReplyAsString(r, reply, json, s, (sizeof(s) / sizeof(char)) - 1);
-				RDEBUG(r,"%s", s);
+				RDEBUG(conf,r,"%s", s);
 			}
 		}
 	}
@@ -383,14 +388,14 @@ static redisReply * execRedisCommandsArgv(request_rec *r, int args, const char *
 	 * In the event of an error, close the connection to the server and
 	 * wait for a reconnection later
 	 */
-	if (sconf->context && (sconf->context->err != REDIS_OK)) {
-		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "REDIS error: %d %s", sconf->context->err, sconf->context->errstr);
-		redisFree(sconf->context);
-		sconf->context = 0;
+	if (conf->context && (conf->context->err != REDIS_OK)) {
+		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "REDIS error: %d %s", conf->context->err, conf->context->errstr);
+		redisFree(conf->context);
+		conf->context = 0;
 	}
 
-	if (sconf->lock) {
-		apr_thread_mutex_unlock(sconf->lock);
+	if (conf->lock) {
+		apr_thread_mutex_unlock(conf->lock);
 	}
 
 	return reply;
@@ -462,12 +467,15 @@ static int redis_handler(request_rec *r) {
 	const char * callback = 0;
 	const char * fileExtension = 0;
 	int isJSONP = 0;
+	
+	mod_redis_conf *conf = ap_get_module_config(r->server->module_config, &redis_module);	
+	
 
 	if(strcmp(r->handler, "redis")) {
 		return DECLINED;
 	}
 
-	RDEBUG(r,"%s", r->path_info);
+	RDEBUG(conf,r,"%s", r->path_info);
 
 	if(r->header_only) {
 		return OK;
@@ -526,7 +534,7 @@ static int redis_handler(request_rec *r) {
 
 			if(rv == APR_SUCCESS) {
 				data[datalen] = 0;
-				RDEBUG(r,"request data: %s",data);
+				RDEBUG(conf,r,"request data: %s",data);
 			}
 		}
 
@@ -566,16 +574,16 @@ static int redis_handler(request_rec *r) {
 	cmd_alias * alias = 0;
 	ap_regmatch_t matches[16];
 
-	for (alias_index = 0; alias_index < sconf->count; alias_index++) {
+	for (alias_index = 0; alias_index < conf->count; alias_index++) {
 		memset(matches, 0, sizeof(matches));
 
-		if(ap_regexec(sconf->aliases[alias_index].expression, path, sizeof(matches) / sizeof(ap_regmatch_t), &matches[0], 0))
+		if(ap_regexec(conf->aliases[alias_index].expression, path, sizeof(matches) / sizeof(ap_regmatch_t), &matches[0], 0))
 			continue;
 
-		if(sconf->aliases[alias_index].method != r->method_number)
+		if(conf->aliases[alias_index].method != r->method_number)
 			continue;
 
-		alias = &sconf->aliases[alias_index];
+		alias = &conf->aliases[alias_index];
 		break;
 	}
 
@@ -637,7 +645,7 @@ static int redis_handler(request_rec *r) {
 						break;
 
 					case ARG_QUERY_PARAM:
-						RDEBUG(r,"QSA lookup: %s",alias->tokenfields[index]);
+						RDEBUG(conf,r,"QSA lookup: %s",alias->tokenfields[index]);
 						fields[index] = apr_table_get(queryparams,alias->tokenfields[index]);
 						items[index] = (size_t) (fields[index] ? strlen(fields[index]) : 0);
 						break;
@@ -648,7 +656,7 @@ static int redis_handler(request_rec *r) {
 						break;
 				}
 
-				RDEBUG(r,"argument %d, \"%*.*s\" replaced with \"%*.*s\"", index,(int) alias->argc[index],(int) alias->argc[index],alias->argv[index],(int) items[index],(int) items[index],fields[index]);
+				RDEBUG(conf,r,"argument %d, \"%*.*s\" replaced with \"%*.*s\"", index,(int) alias->argc[index],(int) alias->argc[index],alias->argv[index],(int) items[index],(int) items[index],fields[index]);
 			}
 		}
 
@@ -712,7 +720,7 @@ static int redis_handler(request_rec *r) {
 		ap_rputs("</response>\r\n", r);
 	}
 
-	sconf->timer1 += clock() - t;
+	conf->timer1 += clock() - t;
 
 	return OK;
 }
@@ -780,7 +788,7 @@ static const char * set_alias(cmd_parms *parms, void *in_struct_ptr,const char *
 	}
 
 	alias->argv = parseCommandIntoArgArray(alias->command, strlen(alias->command), 0, &alias->argc, &alias->arguments);
-	SDEBUG("Parsed RedisAlias command: \'%s\' into %d arguments", alias->command, alias->arguments);
+	SDEBUG(conf,"Parsed RedisAlias command: \'%s\' into %d arguments", alias->command, alias->arguments);
 
 	if (alias->arguments) {
 
@@ -818,7 +826,7 @@ static const char * set_alias(cmd_parms *parms, void *in_struct_ptr,const char *
 			}
 
 			if(alias->tokenargs[tokens]) {
-				SDEBUG(" - RedisAlias argument %d, to be replaced with request expression group %d%s%s",
+				SDEBUG(conf," - RedisAlias argument %d, to be replaced with request expression group %d%s%s",
 						tokens,
 						alias->tokenargs[tokens],
 						alias->tokenfields[tokens] ? " field: " : "",
@@ -897,7 +905,10 @@ static apr_status_t redis_pool_cleanup(void * parm)
 
 static void *redis_create_config(apr_pool_t *p, server_rec *s)
 {
-	if (!(sconf = apr_pcalloc(p, sizeof(mod_redis_conf)))) {
+	
+	mod_redis_conf * sconf = apr_pcalloc(p, sizeof(mod_redis_conf));
+	
+	if (!sconf) {
 		return 0;
 	}
 
@@ -920,18 +931,22 @@ static void *redis_create_config(apr_pool_t *p, server_rec *s)
 
 static void redis_child_init(apr_pool_t *p, server_rec *s)
 {
-	apr_pool_cleanup_register(p, sconf, redis_pool_cleanup, apr_pool_cleanup_null);
+	mod_redis_conf *conf = ap_get_module_config(s->module_config, &redis_module);		
+	apr_pool_cleanup_register(p, conf, redis_pool_cleanup, apr_pool_cleanup_null);
 }
 
 static int redis_post_config(apr_pool_t *p,apr_pool_t *plog,apr_pool_t *ptemp,server_rec *s)
 {
-	if(s && sconf)
+	mod_redis_conf *conf = ap_get_module_config(s->module_config, &redis_module);		
+	
+	if(s && conf) {
 #if (AP_SERVER_MAJORVERSION_NUMBER == 2) && (AP_SERVER_MINORVERSION_NUMBER >= 4)
-		sconf->loglevel = s->log.level;
+		conf->loglevel = s->log.level;
 #else
-		sconf->loglevel = s->loglevel;
+		conf->loglevel = s->loglevel;
 #endif
-
+	}
+	
 	return OK;
 }
 
