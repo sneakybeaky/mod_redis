@@ -19,3 +19,5 @@ Add the following configuration to Apache HTTPD :
 	</IfModule>
 
 Load the load test script into JMeter and you're ready to go.
+
+Alternatively, you can use the loadtest.sh shell script to run jmeter in non-gui mode, as long as jmeter is in your path. 
