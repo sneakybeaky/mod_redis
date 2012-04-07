@@ -1,0 +1,25 @@
+# Compiled source #
+################
+*.pyc
+*.o
+*.a
+*.la
+*.lo
+*.o
+*.slo
+.libs/
+
+
+# OS generated files #
+#################
+.DS_Store*
+ehthumbs.db
+Icon?
+Thumbs.db
+
+# Test artefacts #
+#############
+testing/*.log
+testing/httpd.conf
+
+
