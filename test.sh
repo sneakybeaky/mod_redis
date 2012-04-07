@@ -3,68 +3,6 @@
 # ./test.sh [RedisIPAddress] [RedisPortNumber]
 #
 
-function testGetXML {
-	testXML 'GET' "$1" "$2" xpath "$3"
-}
-
-function testDelXML {
-	testXML 'DELETE' "$1" "$2" xpath "$3"
-}
-
-function testPutXML {
-	testXML 'PUT' "$1" "$3" xpath "$4" "$2"
-}
-
-function testPostXML {
-	testXML 'POST' "$1" "$3" xpath "$4" "$2"
-}
-
-function testGet {
-	testXML 'GET' "$1" "$2" grep
-}
-
-function testXML {
-	
-	if [ $lasterr -ne "0" ]; then
-		return
-	fi
-	
-	if [ "$1" == "POST" ]; then
-		curlparms="--data \"$6\" "
-	elif [ "$1" == "PUT" ]; then
-		curlparms="--data \"$6\" --request PUT "
-	elif [ "$1" == "DELETE" ]; then
-		curlparms="--request DELETE "
-	else
-		curlparms=""
-	fi
-	
-	curlcmd="curl -s $curlparms http://localhost:8081/redis/$2"
-	eval $curlcmd  > "$testingdir/testout"
-	
-	xpathcmd="xpath -e"
-	
-	if [ "$4" == "xpath" ]; then
-		result=`eval "cat $testingdir/testout | $xpathcmd $5 2> /dev/null"`
-	else 
-		result=`eval "cat $testingdir/testout | grep -e '$3' 2> /dev/null"`
-		if [ "$result" ]; then
-			result=$3
-		fi
-	fi
-	
-	if [ "$result" != "$3" ]; then
-		echo '**FAIL**'
-		echo "******** $4 expecting '$3' but was '$result'"
-		echo "******** command: $curlcmd"
-		echo "******** response:"
-		cat "$testingdir/testout"
-		echo
-		lasterr=1
-	else
-		echo 'PASS'
-	fi
-}
 
 setRedisAlias() {	
 	sedcwd=`pwd | sed "s/\\\//\\\\\\\\\//g"`
@@ -175,8 +113,7 @@ apachectl -f `pwd`"/$configfile" -k start
 #we have a new instance of Apache running, start the tests
 echo "Running tests..."
 
-cd tests 
-python all_tests.py
+(cd tests ;python all_tests.py)
 
 apachectl -f `pwd`"/$configfile" -k stop 2> /dev/null
 
