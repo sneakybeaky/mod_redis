@@ -25,6 +25,10 @@
 
 HIREDIS_HOME=hiredis
 
+all: mod_redis.la
+	@true
+
+
 install: mod_redis.la
 	sudo apxs -i -a mod_redis.la
 
