@@ -31,6 +31,7 @@ all: mod_redis.la
 
 install: mod_redis.la
 	sudo apxs -i -a mod_redis.la
+	@echo "\n\nInstall successful!\nRestart Apache before continuing"
 
 mod_redis.la: mod_redis.c $(HIREDIS_HOME)/libhiredis.a
 	apxs -c -I $(HIREDIS_HOME) $(HIREDIS_HOME)/libhiredis.a mod_redis.c
