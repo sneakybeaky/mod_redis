@@ -26,33 +26,19 @@ Alternatively, appending .jsonp and adding a query parameter ‘callback’ resp
 Installation
 ------------
 
-1. Download Hiredis, a minimalistic C client library for the Redis database
+1. Fetch the Hiredis submodule, a minimalistic C client library for the Redis database
 
-    `curl https://github.com/antirez/hiredis/zipball/master -L -o hiredis.zip`
+    `git submodule init; git submodule update`
 
-2. Unzip the downloaded file
+2. Compile mod_redis
 
-    `unzip hiredis.zip`
+    `make`
 
-3. Extract the contents of the zip file (hiredis.zip) and define the base directory. In the 
-example below, the last part of the embedded directory has been obscured so please remember to
-use the directory created when unzipping the file
+3. Install the module into the currently installed Apache instance
 
-    `HIREDIS_HOME=`pwd`/antirez-hiredis-XXXXXXX`
+    `make install`
 
-4. Compile the hiredis library
-
-    `pushd $HIREDIS_HOME ; make ; popd`
-
-5. Compile mod_redis
-
-    `apxs -c -I $HIREDIS_HOME $HIREDIS_HOME/libhiredis.a mod_redis.c`
-
-6. Install the module into the currently installed Apache instance
-
-    `sudo apxs -i -a mod_redis.la`
-
-7. Run the tests. This will create a custom httpd.conf and start a new Apache instance on port 
+4. Run the tests. This will create a custom httpd.conf and start a new Apache instance on port 
 8081 for the purposes of testing. Temp files for this test instance can be found in the ./testing 
 directory. By default, the test script will attempt to connect to local REDIS server on the 
 standard REDIS port (6379), this can be modified with command line parameters
