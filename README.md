@@ -34,11 +34,9 @@ Installation
 
     `unzip hiredis.zip`
 
-3. Extract the contents of the zip file (hiredis.zip) and define the base directory. In the 
-example below, the last part of the embedded directory has been obscured so please remember to
-use the directory created when unzipping the file
+3. Extract the contents of the zip file (hiredis.zip) and define the base directory.
 
-    `HIREDIS_HOME=`pwd`/antirez-hiredis-XXXXXXX`
+    `HIREDIS_HOME=./hiredis-master`
 
 4. Compile the hiredis library
 
