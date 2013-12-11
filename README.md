@@ -28,7 +28,7 @@ Installation
 
 1. Download Hiredis, a minimalistic C client library for the Redis database
 
-    `curl https://github.com/antirez/hiredis/zipball/master -L -o hiredis.zip`
+    `curl https://codeload.github.com/redis/hiredis/zip/master -L -o hiredis.zip`
 
 2. Unzip the downloaded file
 
