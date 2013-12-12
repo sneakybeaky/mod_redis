@@ -28,21 +28,19 @@ Installation
 
 1. Download Hiredis, a minimalistic C client library for the Redis database
 
-    `curl https://github.com/antirez/hiredis/zipball/master -L -o hiredis.zip`
+    `curl https://codeload.github.com/redis/hiredis/zip/master -L -o hiredis.zip`
 
 2. Unzip the downloaded file
 
     `unzip hiredis.zip`
 
-3. Extract the contents of the zip file (hiredis.zip) and define the base directory. In the 
-example below, the last part of the embedded directory has been obscured so please remember to
-use the directory created when unzipping the file
+3. Extract the contents of the zip file (hiredis.zip) and define the base directory.
 
-    `HIREDIS_HOME=`pwd`/antirez-hiredis-XXXXXXX`
+    `HIREDIS_HOME=./hiredis-master`
 
 4. Compile the hiredis library
 
-    `pushd $HIREDIS_HOME ; make ; popd`
+    `pushd $HIREDIS_HOME ; make static ; popd`
 
 5. Compile mod_redis
 
